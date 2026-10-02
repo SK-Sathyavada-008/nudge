@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNudge } from '../../context/NudgeContext';
 import { Card3D } from '../common/Card3D';
-import { Gift, Lock } from 'lucide-react';
+import { Gift, Lock, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const TreatWall: React.FC = () => {
@@ -10,12 +10,11 @@ export const TreatWall: React.FC = () => {
 
   const handleOpenTreatCelebration = (treat: any) => {
     confetti({
-      particleCount: 80,
-      spread: 70,
+      particleCount: 100,
+      spread: 75,
       origin: { y: 0.6 },
       colors: ['#f59e0b', '#10b981', '#6366f1', '#ec4899'],
     });
-    // Triggers active treat modal directly in state or voucher copy
     const voucherText = `🎟️ [NUDGE VEER OFFICIAL TREAT VOUCHER]
 ==============================================
 Holder: Veer (#Best Buddy Ever)
@@ -58,46 +57,59 @@ Scorekeeper Note: "${treat.evilScorekeeperQuote}"
               Treat Bank
             </div>
             <div className="text-lg font-black text-amber-300 font-mono">
-              {totalPoints} <span className="text-xs text-amber-400/80 font-normal">pts</span>
+              {totalPoints} <span className="text-xs text-amber-400/80 font-normal">🪙</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Treats 3D Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {treats.map((treat) => {
-          const needed = treat.requiredPoints - totalPoints;
+          const needed = Math.max(0, treat.requiredPoints - totalPoints);
+          const isLegendary = treat.requiredPoints >= 1000;
 
           return (
             <Card3D key={treat.id} maxTilt={8}>
               <div
-                className={`relative rounded-3xl p-6 border-2 flex flex-col justify-between min-h-[300px] transition-all select-none ${
+                className={`relative rounded-3xl p-5 border-2 flex flex-col justify-between min-h-[340px] transition-all select-none ${
                   treat.unlocked
                     ? 'border-amber-400/60 bg-gradient-to-br from-amber-950/40 via-slate-900 to-purple-950/40 shadow-2xl shadow-amber-500/15'
-                    : 'border-slate-800/80 bg-slate-950/80 opacity-70'
+                    : isLegendary
+                    ? 'border-amber-500/30 bg-gradient-to-br from-amber-950/20 via-slate-950 to-slate-900/90'
+                    : 'border-slate-800/80 bg-slate-950/80 opacity-90'
                 }`}
               >
+                {isLegendary && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow-md shadow-amber-500/30 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> LEGENDARY
+                    </span>
+                  </div>
+                )}
+
                 <div>
                   {/* Top Status */}
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-3 mt-1">
                     <span className="text-4xl">{treat.icon}</span>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-black font-mono ${
+                      className={`rounded-full px-2.5 py-1 text-xs font-black font-mono ${
                         treat.unlocked
                           ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40 animate-pulse'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          : isLegendary
+                          ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
                       }`}
                     >
-                      {treat.requiredPoints} Points Tier
+                      {treat.requiredPoints} 🪙
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-black text-white tracking-wide mb-1">
+                  <h3 className="text-base font-black text-white tracking-wide mb-1.5">
                     {treat.title}
                   </h3>
 
-                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  <p className="text-xs text-slate-300 leading-relaxed italic mb-4">
                     {treat.tagline}
                   </p>
                 </div>
@@ -105,35 +117,32 @@ Scorekeeper Note: "${treat.evilScorekeeperQuote}"
                 {/* Bottom Unlocked / Locked State */}
                 <div>
                   {treat.unlocked ? (
-                    <div className="space-y-3">
-                      <div className="rounded-2xl border-2 border-emerald-500/50 bg-emerald-950/40 p-3 text-center">
+                    <div className="space-y-2.5">
+                      <div className="rounded-2xl border-2 border-emerald-500/50 bg-emerald-950/40 p-2.5 text-center">
                         <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
                           🎉 TREAT UNLOCKED
                         </div>
                         <div className="text-xs font-black text-emerald-300 animate-pulse mt-0.5">
                           NOW GO ASK SK FOR A TREAT.
                         </div>
-                        <div className="text-[10px] text-emerald-400/80 italic mt-0.5">
-                          &ldquo;{treat.evilScorekeeperQuote}&rdquo;
-                        </div>
                       </div>
 
                       <button
                         onClick={() => handleOpenTreatCelebration(treat)}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 p-3 text-xs font-black text-slate-950 shadow-[0_4px_0_theme(colors.amber.700)] active:shadow-none active:translate-y-1 transition-all"
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 p-2.5 text-xs font-black text-slate-950 shadow-[0_4px_0_theme(colors.amber.700)] active:shadow-none active:translate-y-1 transition-all cursor-pointer"
                       >
-                        <Gift className="h-4 w-4" />
+                        <Gift className="h-3.5 w-3.5" />
                         <span>CLAIM TREAT VOUCHER</span>
                       </button>
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 mb-1">
-                        <Lock className="h-4 w-4 text-slate-500" />
-                        <span>Earn {treat.requiredPoints} points to unlock</span>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 text-center">
+                      <div className="text-sm font-black text-amber-400 font-mono">
+                        {treat.requiredPoints}🪙
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono">
-                        Need {needed} more points from completed challenges
+                      <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-400 mt-1">
+                        <Lock className="h-3.5 w-3.5 text-slate-500" />
+                        <span>{needed} more</span>
                       </div>
                     </div>
                   )}
