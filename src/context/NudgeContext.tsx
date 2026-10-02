@@ -162,6 +162,37 @@ export const NudgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [state]);
 
+  // Sync score from MongoDB on first load (if backend is available)
+  useEffect(() => {
+    const syncFromMongo = async () => {
+      try {
+        const res = await fetch('/api/user/score?userId=veer-01', { signal: AbortSignal.timeout(3000) });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.exists && typeof data.totalPoints === 'number') {
+          setState((prev) => {
+            // Only use MongoDB value if it's higher (anti-rollback protection)
+            const mongoPoints = data.totalPoints;
+            if (mongoPoints > prev.totalPoints) {
+              return {
+                ...prev,
+                totalPoints: mongoPoints,
+                arcadeTokens: mongoPoints,
+                completedChallenges: data.completedChallenges ?? prev.completedChallenges,
+                unlockedBadges: data.unlockedBadges ?? prev.unlockedBadges,
+                unlockedTreats: data.unlockedTreats ?? prev.unlockedTreats,
+              };
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // Silent fallback — MongoDB optional
+      }
+    };
+    syncFromMongo();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const setPillar = (pillar: PillarType) => {
     setState((prev) => ({
       ...prev,
@@ -425,6 +456,20 @@ export const NudgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       hintsUsed > 0
         ? ' 😈 Nice try. The treat department has noticed the assistance.'
         : ' 😈 Clean solve. Points added to your SK treat bank.';
+
+    // Background sync to MongoDB (silent fire-and-forget)
+    fetch('/api/user/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: 'veer-01',
+        totalPoints: newTotalPoints,
+        coinBalance: newTotalPoints,
+        completedChallenges: updatedCompleted,
+        unlockedBadges: [...state.unlockedBadges, ...newlyUnlockedBadgeIds],
+        unlockedTreats: [...state.unlockedTreats, ...newlyUnlockedTreatIds],
+      }),
+    }).catch(() => { /* silent — MongoDB is optional */ });
 
     return {
       success: true,

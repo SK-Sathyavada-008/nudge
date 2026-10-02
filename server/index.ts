@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { gemmaService } from './gemmaService.ts';
 import { mongoService } from './mongoService.ts';
 import { roadmapService } from './roadmapService.ts';
@@ -261,6 +263,84 @@ app.post('/api/treats/redeem', async (req, res) => {
   }
 });
 
+// GET /api/user/score — Get user totalPoints and full profile from MongoDB
+app.get('/api/user/score', async (req, res) => {
+  const userId = (req.query.userId as string) || 'veer-01';
+  try {
+    if (!mongoService.isAvailable()) {
+      res.json({ success: false, persisted: false, message: 'MongoDB not available' });
+      return;
+    }
+    const db = (mongoService as any).db;
+    const user = db ? await db.collection('nudge_users').findOne({ userId }) : null;
+    if (!user) {
+      res.json({ success: true, exists: false, totalPoints: 0, coinBalance: 0 });
+      return;
+    }
+    res.json({
+      success: true,
+      exists: true,
+      persisted: true,
+      totalPoints: user.totalPoints ?? user.coinBalance ?? 0,
+      coinBalance: user.coinBalance ?? user.totalPoints ?? 0,
+      completedChallenges: user.completedChallenges || {},
+      unlockedBadges: user.unlockedBadges || [],
+      unlockedTreats: user.unlockedTreats || [],
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/user/score — Save user totalPoints, challenges, and badges to MongoDB
+app.post('/api/user/score', async (req, res) => {
+  const {
+    userId = 'veer-01',
+    totalPoints,
+    coinBalance,
+    completedChallenges,
+    unlockedBadges,
+    unlockedTreats,
+  } = req.body;
+
+  const points = typeof totalPoints === 'number' ? totalPoints : typeof coinBalance === 'number' ? coinBalance : null;
+  if (points === null) {
+    res.status(400).json({ success: false, error: 'totalPoints or coinBalance number required' });
+    return;
+  }
+
+  try {
+    if (!mongoService.isAvailable()) {
+      res.json({ success: false, persisted: false, message: 'MongoDB not available' });
+      return;
+    }
+    const db = (mongoService as any).db;
+    if (!db) {
+      res.json({ success: false, persisted: false });
+      return;
+    }
+
+    const updateDoc: Record<string, any> = {
+      totalPoints: points,
+      coinBalance: typeof coinBalance === 'number' ? coinBalance : points,
+      updatedAt: new Date(),
+    };
+    if (completedChallenges) updateDoc.completedChallenges = completedChallenges;
+    if (unlockedBadges) updateDoc.unlockedBadges = unlockedBadges;
+    if (unlockedTreats) updateDoc.unlockedTreats = unlockedTreats;
+
+    await db.collection('nudge_users').updateOne(
+      { userId },
+      { $set: updateDoc, $setOnInsert: { userId, createdAt: new Date() } },
+      { upsert: true }
+    );
+
+    res.json({ success: true, persisted: true, totalPoints: points });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/treats/balance — Get user coin balance from MongoDB
 app.get('/api/treats/balance', async (req, res) => {
   const userId = (req.query.userId as string) || 'veer-01';
@@ -271,7 +351,7 @@ app.get('/api/treats/balance', async (req, res) => {
     }
     const db = (mongoService as any).db;
     const user = db ? await db.collection('nudge_users').findOne({ userId }) : null;
-    res.json({ balance: user?.coinBalance ?? null, persisted: Boolean(user) });
+    res.json({ balance: user?.coinBalance ?? user?.totalPoints ?? null, persisted: Boolean(user) });
   } catch (err: any) {
     res.json({ balance: null, error: err.message });
   }
@@ -279,8 +359,9 @@ app.get('/api/treats/balance', async (req, res) => {
 
 // POST /api/treats/sync — Sync local balance to MongoDB
 app.post('/api/treats/sync', async (req, res) => {
-  const { userId = 'veer-01', coinBalance } = req.body;
-  if (typeof coinBalance !== 'number') {
+  const { userId = 'veer-01', coinBalance, totalPoints } = req.body;
+  const balance = typeof coinBalance === 'number' ? coinBalance : totalPoints;
+  if (typeof balance !== 'number') {
     res.status(400).json({ success: false, error: 'coinBalance required' });
     return;
   }
@@ -293,25 +374,23 @@ app.post('/api/treats/sync', async (req, res) => {
     if (!db) { res.json({ success: false }); return; }
     await db.collection('nudge_users').updateOne(
       { userId },
-      { $set: { coinBalance, updatedAt: new Date() }, $setOnInsert: { userId, createdAt: new Date() } },
+      { $set: { coinBalance: balance, totalPoints: balance, updatedAt: new Date() }, $setOnInsert: { userId, createdAt: new Date() } },
       { upsert: true }
     );
-    res.json({ success: true, persisted: true });
+    res.json({ success: true, persisted: true, balance });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // Serve static frontend files in production
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distPath = path.resolve(__dirname, '../dist');
 
 app.use(express.static(distPath));
-app.get('*', (req, res, next) => {
+// Express 5 compatible SPA fallback — no wildcard '*' parameter
+app.use((req, res, next) => {
   if (req.path.startsWith('/api')) return next();
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
     if (err) next();
