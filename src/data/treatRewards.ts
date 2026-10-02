@@ -1,0 +1,40 @@
+import type { RealWorldTreat } from '../types';
+
+export const REAL_WORLD_TREATS: RealWorldTreat[] = [
+  {
+    id: 'treat_01',
+    requiredPoints: 50,
+    title: 'Canteen Samosa & Hot Chai Feast',
+    tagline: '50 genuine challenge points conquered! SK owes you canteen food.',
+    giver: 'SK',
+    message: 'Now go ask SK for a treat.',
+    evilScorekeeperQuote: "😈 Don't make me ask twice.",
+    icon: '🥟',
+    unlocked: false,
+    claimed: false,
+  },
+  {
+    id: 'treat_02',
+    requiredPoints: 100,
+    title: 'Dhaba Evening Feast / Shawarma Run',
+    tagline: '100 points! The evil algorithm department has gone completely bankrupt.',
+    giver: 'SK',
+    message: 'Now go ask SK for a treat.',
+    evilScorekeeperQuote: "😈 Don't let SK dodge this. You earned every single bite.",
+    icon: '🌯',
+    unlocked: false,
+    claimed: false,
+  },
+  {
+    id: 'treat_03',
+    requiredPoints: 150,
+    title: 'Weekend Mega Treat + Zero-DSA Immunity Pass',
+    tagline: '150 legendary points. A full weekend meal funded by SK and absolute immunity from code roasts.',
+    giver: 'SK',
+    message: 'Now go ask SK for a treat.',
+    evilScorekeeperQuote: '😈 SK has zero legal defenses left. Claim the mega treat immediately.',
+    icon: '👑',
+    unlocked: false,
+    claimed: false,
+  },
+];
